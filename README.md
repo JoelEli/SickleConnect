@@ -88,6 +88,10 @@ A comprehensive community platform designed specifically for individuals living 
    MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/sickleconnect
    JWT_SECRET=your-super-secret-jwt-key
    PORT=5000
+   FRONTEND_URL=https://sickle-connect.vercel.app
+   BACKEND_URL=https://sickleconnect.onrender.com
+   WEBSOCKET_URL=wss://sickleconnect.onrender.com/ws
+   NODE_ENV=production
    ```
 
 4. **Start the backend server**
@@ -114,6 +118,12 @@ A comprehensive community platform designed specifically for individuals living 
 
 4. **Open your browser**
    Navigate to `http://localhost:8080`
+
+## 🌐 Production URLs
+
+- **Frontend**: [https://sickle-connect.vercel.app](https://sickle-connect.vercel.app)
+- **Backend API**: [https://sickleconnect.onrender.com](https://sickleconnect.onrender.com)
+- **WebSocket**: `wss://sickleconnect.onrender.com/ws`
 
 ## 🏗️ Project Structure
 

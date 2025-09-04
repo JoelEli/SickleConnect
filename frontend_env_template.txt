@@ -1,0 +1,14 @@
+# Frontend Environment Variables
+# Copy this file to .env.local and update the values
+
+# Backend API URL
+VITE_API_URL=https://sickleconnect.onrender.com/api
+
+# WebSocket URL
+VITE_WEBSOCKET_URL=wss://sickleconnect.onrender.com/ws
+
+# Frontend URL
+VITE_FRONTEND_URL=https://sickle-connect.vercel.app
+
+# Environment
+VITE_NODE_ENV=production

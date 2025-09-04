@@ -55,7 +55,15 @@ wss.on('connection', (ws, req) => {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:8080',
+    'http://localhost:8081', 
+    'http://localhost:8082',
+    'https://sickle-connect.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes

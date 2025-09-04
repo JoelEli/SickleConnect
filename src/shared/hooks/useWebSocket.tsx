@@ -132,7 +132,7 @@ const globalMessageHandlers = new Set<(message: WebSocketMessage) => void>();
 // Specific hook for SickleConnect WebSocket events
 export function useSickleConnectWebSocket(userId?: string) {
   const [isConnected, setIsConnected] = useState(false);
-  const wsUrl = `ws://localhost:5000/ws${userId ? `?userId=${userId}` : ''}`;
+  const wsUrl = `wss://sickleconnect.onrender.com/ws${userId ? `?userId=${userId}` : ''}`;
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     // This will be called for all registered handlers
