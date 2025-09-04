@@ -23,7 +23,7 @@ setWebSocketClients(clients);
 
 // WebSocket connection handling
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url, 'http://localhost');
+  const url = new URL(req.url, 'https://sickleconnect.onrender.com');
   const userId = url.searchParams.get('userId');
   
   console.log(`WebSocket client connected: ${userId || 'anonymous'}`);
@@ -57,9 +57,6 @@ wss.on('connection', (ws, req) => {
 // Middleware
 app.use(cors({
   origin: [
-    'http://localhost:8080',
-    'http://localhost:8081', 
-    'http://localhost:8082',
     'https://sickle-connect.vercel.app'
   ],
   credentials: true,
@@ -120,12 +117,8 @@ mongoose.connect(mongoUri)
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       
-      // Display correct WebSocket URL based on environment
-      const wsProtocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
-      const wsHost = process.env.NODE_ENV === 'production' 
-        ? 'sickleconnect.onrender.com' 
-        : `localhost:${PORT}`;
-      const wsUrl = `${wsProtocol}://${wsHost}/ws`;
+      // Display production WebSocket URL
+      const wsUrl = 'wss://sickleconnect.onrender.com/ws';
       
       console.log(`🔌 WebSocket server enabled on ${wsUrl}`);
     });

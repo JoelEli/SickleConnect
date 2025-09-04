@@ -117,7 +117,7 @@ A comprehensive community platform designed specifically for individuals living 
    ```
 
 4. **Open your browser**
-   Navigate to `http://localhost:8080`
+   Navigate to the production URL: `https://sickle-connect.vercel.app`
 
 ## 🌐 Production URLs
 

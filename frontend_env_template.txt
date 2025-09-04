@@ -1,13 +1,13 @@
-# Frontend Environment Variables
-# Copy this file to .env.local and update the values
+# Frontend Environment Variables - PRODUCTION ONLY
+# This template is for production deployment only
 
-# Backend API URL
+# Backend API URL (Production)
 VITE_API_URL=https://sickleconnect.onrender.com/api
 
-# WebSocket URL
+# WebSocket URL (Production)
 VITE_WEBSOCKET_URL=wss://sickleconnect.onrender.com/ws
 
-# Frontend URL
+# Frontend URL (Production)
 VITE_FRONTEND_URL=https://sickle-connect.vercel.app
 
 # Environment

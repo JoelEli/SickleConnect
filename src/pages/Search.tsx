@@ -40,7 +40,7 @@ const SearchPage: React.FC = () => {
     setIsLoading(true);
     try {
       // This would be implemented in your backend
-      const response = await fetch(`http://localhost:5000/api/search?q=${encodeURIComponent(searchQuery)}&type=${type}`);
+      const response = await fetch(`https://sickleconnect.onrender.com/api/search?q=${encodeURIComponent(searchQuery)}&type=${type}`);
       const data = await response.json();
       setResults(data.results || []);
     } catch (error) {
