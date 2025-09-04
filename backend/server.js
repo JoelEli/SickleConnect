@@ -78,7 +78,15 @@ mongoose.connect(mongoUri)
     console.log('✅ Connected to MongoDB');
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🔌 WebSocket server enabled on ws://localhost:${PORT}/ws`);
+      
+      // Display correct WebSocket URL based on environment
+      const wsProtocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
+      const wsHost = process.env.NODE_ENV === 'production' 
+        ? 'sickleconnect.onrender.com' 
+        : `localhost:${PORT}`;
+      const wsUrl = `${wsProtocol}://${wsHost}/ws`;
+      
+      console.log(`🔌 WebSocket server enabled on ${wsUrl}`);
     });
   })
   .catch((error) => {
