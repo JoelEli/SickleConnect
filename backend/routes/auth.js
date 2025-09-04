@@ -7,6 +7,7 @@ const router = express.Router();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
+    console.log('Register request received:', { body: req.body, headers: req.headers });
     const { email, password, fullName, role, genotype, bio } = req.body;
 
     // Validate required fields
@@ -101,6 +102,7 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
+    console.log('Login request received:', { body: req.body, headers: req.headers });
     const { email, password } = req.body;
 
     // Validate required fields
