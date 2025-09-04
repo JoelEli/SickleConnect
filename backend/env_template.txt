@@ -1,0 +1,25 @@
+# SickleConnect Backend Environment Variables
+# Copy this content to your .env file in the backend directory
+
+# MongoDB Configuration
+MONGODB_URI=mongodb+srv://joeltsewagbe55:Hiking1902@cluster0.ueu5w3l.mongodb.net/sickleconnect?retryWrites=true&w=majority&appName=Cluster0
+
+
+# JWT Secret Key (Change this in production!)
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-2024
+
+# Server Configuration
+PORT=5000
+
+# Frontend URL (for CORS)
+CLIENT_URL=http://localhost:8082
+
+# Environment
+NODE_ENV=development
+
+# Optional: Session Secret (if you add sessions later)
+SESSION_SECRET=your-session-secret-key
+
+# Optional: Rate Limiting (if you add rate limiting later)
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
