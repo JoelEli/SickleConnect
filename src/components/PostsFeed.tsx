@@ -14,9 +14,11 @@ const PostsFeed = () => {
     loading, 
     refetch, 
     likePost, 
+    deletePost,
     updatePostLike, 
     updatePostCommentCount, 
-    addNewPost 
+    addNewPost,
+    removePost
   } = usePosts();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -45,8 +47,17 @@ const PostsFeed = () => {
         const { postId: commentPostId } = message.data;
         updatePostCommentCount(commentPostId);
         break;
+      case WEBSOCKET_EVENTS.POST_DELETED:
+        // Remove deleted post from feed
+        const { postId: deletedPostId } = message.data;
+        removePost(deletedPostId);
+        toast({
+          title: "Post Deleted",
+          description: `A post was deleted by ${message.data.deletedBy}`,
+        });
+        break;
     }
-  }, [addNewPost, updatePostLike, updatePostCommentCount, toast]);
+  }, [addNewPost, updatePostLike, updatePostCommentCount, removePost, toast]);
 
   // Register message handler
   useWebSocketMessageHandler(handleWebSocketMessage);
@@ -82,7 +93,7 @@ const PostsFeed = () => {
       ) : (
         <div>
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} onDelete={deletePost} />
           ))}
         </div>
       )}

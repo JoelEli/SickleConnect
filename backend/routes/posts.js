@@ -283,4 +283,38 @@ router.post('/:postId/comments', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete post
+router.delete('/:postId', authenticateToken, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user._id;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Check if user is the author of the post
+    if (post.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'You can only delete your own posts' });
+    }
+
+    await Post.findByIdAndDelete(postId);
+
+    // Broadcast post deletion to all clients
+    broadcastToAll({
+      type: 'post_deleted',
+      data: {
+        postId: postId,
+        deletedBy: req.user.fullName
+      }
+    });
+
+    res.json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ message: 'Failed to delete post. Please try again.' });
+  }
+});
+
 export default router;

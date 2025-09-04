@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share2, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Loader2, Trash2 } from 'lucide-react';
 import { Post } from '@/hooks/usePosts';
 import UserBadge from './UserBadge';
 import CommentSection from './CommentSection';
@@ -12,12 +12,14 @@ import { useToast } from '@/hooks/use-toast';
 
 interface PostCardProps {
   post: Post;
+  onDelete?: (postId: string) => Promise<{ error: string | null }>;
 }
 
-const PostCard = ({ post }: PostCardProps) => {
+const PostCard = ({ post, onDelete }: PostCardProps) => {
   const [isLiking, setIsLiking] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user } = useAuth();
   const { likePost } = usePosts();
   const { toast } = useToast();
@@ -105,6 +107,39 @@ const PostCard = ({ post }: PostCardProps) => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await onDelete(post.id);
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Post Deleted",
+          description: "Your post has been deleted successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete post",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
       <Card className="mb-4">
@@ -187,6 +222,24 @@ const PostCard = ({ post }: PostCardProps) => {
               )}
               Share
             </Button>
+
+            {/* Delete button - only show for post author */}
+            {user && user._id === post.user_id && onDelete && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-2 text-muted-foreground hover:text-red-500"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Delete
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

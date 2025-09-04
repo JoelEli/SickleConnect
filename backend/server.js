@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import authRoutes from './routes/auth.js';
 import postRoutes, { setWebSocketClients } from './routes/posts.js';
+import chatRoutes, { setWebSocketClients as setChatWebSocketClients } from './routes/chat.js';
 
 dotenv.config();
 
@@ -18,8 +19,9 @@ const PORT = process.env.PORT || 5000;
 // Store connected clients
 const clients = new Map();
 
-// Pass WebSocket clients reference to posts routes
+// Pass WebSocket clients reference to routes
 setWebSocketClients(clients);
+setChatWebSocketClients(clients);
 
 // WebSocket connection handling
 wss.on('connection', (ws, req) => {
@@ -93,6 +95,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -126,6 +129,31 @@ mongoose.connect(mongoUri)
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);
   });
+
+// Chat cleanup job - runs every hour to delete messages older than 24 hours
+setInterval(async () => {
+  try {
+    const Chat = (await import('./models/Chat.js')).default;
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const result = await Chat.updateMany(
+      {},
+      {
+        $pull: {
+          messages: {
+            timestamp: { $lt: twentyFourHoursAgo }
+          }
+        }
+      }
+    );
+    
+    if (result.modifiedCount > 0) {
+      console.log(`Cleaned up old messages from ${result.modifiedCount} chats`);
+    }
+  } catch (error) {
+    console.error('Chat cleanup error:', error);
+  }
+}, 60 * 60 * 1000); // Run every hour
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

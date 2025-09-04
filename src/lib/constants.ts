@@ -7,6 +7,7 @@ export const ROUTES = {
   SETTINGS: '/settings',
   SEARCH: '/search',
   NOTIFICATIONS: '/notifications',
+  CHAT: '/chat',
 } as const;
 
 export const API_ENDPOINTS = {
@@ -61,8 +62,10 @@ export const WEBSOCKET_EVENTS = {
   NEW_POST: 'new_post',
   POST_LIKED: 'post_liked',
   NEW_COMMENT: 'new_comment',
+  POST_DELETED: 'post_deleted',
   USER_ONLINE: 'user_online',
   USER_OFFLINE: 'user_offline',
+  NEW_MESSAGE: 'new_message',
 } as const;
 
 export const STORAGE_KEYS = {

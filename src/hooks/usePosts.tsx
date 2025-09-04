@@ -94,6 +94,22 @@ export function usePosts() {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   }, []);
 
+  // Function to remove post from WebSocket
+  const removePost = useCallback((postId: string) => {
+    setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+  }, []);
+
+  // Function to delete post
+  const deletePost = async (postId: string) => {
+    try {
+      await apiClient.deletePost(postId);
+      removePost(postId);
+      return { error: null };
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
   }, []);
@@ -103,9 +119,11 @@ export function usePosts() {
     loading,
     createPost,
     likePost,
+    deletePost,
     updatePostLike,
     updatePostCommentCount,
     addNewPost,
+    removePost,
     refetch: fetchPosts
   };
 }

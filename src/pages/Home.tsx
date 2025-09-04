@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, Users, MessageSquare, Shield, ArrowRight, Stethoscope, Search, CreditCard } from 'lucide-react';
+import { Heart, Users, MessageSquare, Shield, ArrowRight, Stethoscope, Search, CreditCard, MessageCircle } from 'lucide-react';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
 import HamburgerMenu from '@/shared/components/HamburgerMenu';
 
@@ -22,6 +22,12 @@ const Home = () => {
               <Button variant="ghost">
                 <Search className="h-4 w-4 mr-2" />
                 Search
+              </Button>
+            </Link>
+            <Link to="/chat">
+              <Button variant="ghost">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Chat
               </Button>
             </Link>
             <Link to="/community">

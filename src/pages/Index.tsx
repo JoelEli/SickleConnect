@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, Home, Info, Search, CreditCard } from 'lucide-react';
+import { Heart, Home, Info, Search, CreditCard, MessageCircle } from 'lucide-react';
 import PostsFeed from '@/components/PostsFeed';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
 import NotificationCenter from '@/shared/components/NotificationCenter';
@@ -44,6 +44,12 @@ const Index = () => {
               <Button variant="ghost">
                 <Search className="h-4 w-4 mr-2" />
                 Search
+              </Button>
+            </Link>
+            <Link to="/chat">
+              <Button variant="ghost">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Chat
               </Button>
             </Link>
             <Link to="/about">

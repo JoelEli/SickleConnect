@@ -124,6 +124,32 @@ class ApiClient {
       });
     },
   };
+
+  // Chat endpoints
+  chat = {
+    getChats: () => this.request('/chat/chats'),
+    
+    getChat: (userId: string) => this.request(`/chat/chat/${userId}`),
+    
+    sendMessage: (chatId: string, content: string) =>
+      this.request(`/chat/chat/${chatId}/message`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      }),
+    
+    markAsRead: (chatId: string) =>
+      this.request(`/chat/chat/${chatId}/read`, {
+        method: 'PUT',
+      }),
+    
+    getOnlineUsers: () => this.request('/chat/users/online'),
+  };
+
+  // Delete post
+  deletePost: (postId: string) =>
+    this.request(`/posts/${postId}`, {
+      method: 'DELETE',
+    });
 }
 
 export const apiClient = new ApiClient(API_BASE);
