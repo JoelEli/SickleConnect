@@ -146,7 +146,7 @@ class ApiClient {
   };
 
   // Delete post
-  deletePost: (postId: string) =>
+  deletePost = (postId: string) =>
     this.request(`/posts/${postId}`, {
       method: 'DELETE',
     });
