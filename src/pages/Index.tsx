@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, Home, Info, Search, CreditCard, MessageCircle } from 'lucide-react';
+import { Home, Info, Search, CreditCard, MessageCircle } from 'lucide-react';
 import PostsFeed from '@/components/PostsFeed';
 import { ThemeToggle } from '@/shared/components/ThemeToggle';
 import NotificationCenter from '@/shared/components/NotificationCenter';
@@ -28,7 +28,7 @@ const Index = () => {
       <nav className="bg-card border-b shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Heart className="h-8 w-8 text-primary" />
+            <img src="/favicon.ico" alt="SickleConnect Logo" className="h-8 w-8" />
             <h1 className="text-2xl font-bold text-primary">SickleConnect</h1>
           </div>
           
