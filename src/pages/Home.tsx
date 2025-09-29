@@ -12,7 +12,7 @@ const Home = () => {
       <nav className="bg-card border-b shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Heart className="h-8 w-8 text-primary" />
+            <img src="/favicon.ico" alt="SickleConnect Logo" className="h-8 w-8" />
             <h1 className="text-2xl font-bold text-primary">SickleConnect</h1>
           </div>
           
