@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Heart, User, LogOut, Search, Home, Info, CreditCard, MessageCircle } from 'lucide-react';
+import { Menu, X, User, LogOut, Search, Home, Info, CreditCard, MessageCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +30,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({ className = '' }) => {
     { icon: Home, label: 'Home', path: '/', show: true },
     { icon: Search, label: 'Search', path: '/search', show: true },
     { icon: MessageCircle, label: 'Chat', path: '/chat', show: true },
+    { icon: Users, label: 'Community', path: '/community', show: true },
     { icon: Info, label: 'About', path: '/about', show: true },
     { icon: CreditCard, label: 'Donate', path: '/donate', show: true, isDonate: true },
   ];

@@ -16,7 +16,7 @@ const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 5000;
 
-// Store connected clients
+// Store connected clientsb
 const clients = new Map();
 
 // Pass WebSocket clients reference to routes
@@ -111,24 +111,69 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// MongoDB connection
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sickleconnect';
+// MongoDB connection with fallback to local MongoDB on DNS/ENOTFOUND errors
+const envMongoUri = process.env.MONGODB_URI;
+const localMongoUri = 'mongodb://localhost:27017/sickleconnect';
 
-mongoose.connect(mongoUri)
-  .then(() => {
+async function startServer() {
+  const tryUri = envMongoUri || localMongoUri;
+
+  try {
+    await mongoose.connect(tryUri);
     console.log('✅ Connected to MongoDB');
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      
-      // Display production WebSocket URL
       const wsUrl = 'wss://sickleconnect.onrender.com/ws';
-      
       console.log(`🔌 WebSocket server enabled on ${wsUrl}`);
     });
-  })
-  .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
-  });
+    return;
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error && error.message ? error.message : error);
+
+    // If we attempted an environment URI and it failed due to DNS / SRV lookup, try local fallback
+    const isDnsError = envMongoUri && (/ENOTFOUND/.test(error && error.message) || /querySrv/.test(error && error.message));
+
+    if (isDnsError) {
+      console.warn('⚠️  Environment MongoDB URI failed DNS lookup. Falling back to local MongoDB at', localMongoUri);
+      try {
+        await mongoose.connect(localMongoUri);
+        console.log('✅ Connected to local MongoDB');
+        server.listen(PORT, () => {
+          console.log(`🚀 Server running on port ${PORT}`);
+          const wsUrl = 'wss://sickleconnect.onrender.com/ws';
+          console.log(`🔌 WebSocket server enabled on ${wsUrl}`);
+        });
+        return;
+      } catch (err2) {
+        console.error('❌ Local MongoDB connection error:', err2);
+
+        // Last-resort: start an in-memory MongoDB for development (no install required)
+        console.warn('⚠️  Attempting to start an in-memory MongoDB for development (mongodb-memory-server)');
+        try {
+          const { MongoMemoryServer } = await import('mongodb-memory-server');
+          const mongod = await MongoMemoryServer.create();
+          const memUri = mongod.getUri();
+          await mongoose.connect(memUri);
+          console.log('✅ Connected to in-memory MongoDB');
+          server.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+            const wsUrl = 'wss://sickleconnect.onrender.com/ws';
+            console.log(`🔌 WebSocket server enabled on ${wsUrl}`);
+          });
+          return;
+        } catch (memErr) {
+          console.error('❌ In-memory MongoDB error:', memErr);
+          process.exit(1);
+        }
+      }
+    }
+
+    // For other errors, exit so the operator can fix connection details
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Chat cleanup job - runs every hour to delete messages older than 24 hours
 setInterval(async () => {

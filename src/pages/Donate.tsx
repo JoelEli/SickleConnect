@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Heart, CreditCard, Shield, Users, Stethoscope } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Heart, CreditCard, Shield, Users, Stethoscope, Search, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/shared/components/ThemeToggle';
+import HamburgerMenu from '@/shared/components/HamburgerMenu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-
 const Donate = () => {
   const [donationAmount, setDonationAmount] = useState('');
   const [customAmount, setCustomAmount] = useState('');
@@ -15,7 +16,6 @@ const Donate = () => {
   const [donorEmail, setDonorEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const { toast } = useToast();
 
   const presetAmounts = [25, 50, 100, 250, 500];
 
@@ -26,6 +26,51 @@ const Donate = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20">
+      <nav className="bg-card border-b shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <Link to="/" className="flex items-center gap-2">
+            <Heart className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold text-primary">SickleConnect</span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-4">
+            <Link to="/search">
+              <Button variant="ghost">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
+            </Link>
+            <Link to="/chat">
+              <Button variant="ghost">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Chat
+              </Button>
+            </Link>
+            <Link to="/community">
+              <Button variant="ghost">Community</Button>
+            </Link>
+            <Link to="/about">
+              <Button variant="ghost">About</Button>
+            </Link>
+            <Link to="/donate">
+              <Button variant="default" className="bg-pink-600 hover:bg-pink-700">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Donate
+              </Button>
+            </Link>
+            <ThemeToggle />
+            <Link to="/auth">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
+
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <HamburgerMenu />
+          </div>
+        </div>
+      </nav>
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
@@ -226,21 +271,25 @@ const Donate = () => {
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm">$25</span>
+                    <span className="text-sm">$10</span>
                     <span className="text-sm text-muted-foreground">Supports 1 month of platform hosting</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">$50</span>
+                    <span className="text-sm">$15</span>
                     <span className="text-sm text-muted-foreground">Enables 10 new user registrations</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">$100</span>
+                    <span className="text-sm">$30</span>
                     <span className="text-sm text-muted-foreground">Funds community outreach programs</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">$250</span>
+                    <span className="text-sm">$45</span>
                     <span className="text-sm text-muted-foreground">Supports medical resource development</span>
                   </div>
+                  <div className="flex justify-between">
+  <span className="text-sm">$60</span>
+  <span className="text-sm text-muted-foreground">Supports medical resource development</span>
+</div>
                 </div>
               </CardContent>
             </Card>
