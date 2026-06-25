@@ -35,7 +35,7 @@ export const GENOTYPES = [
   { value: 'SS', label: 'SS (Sickle Cell Anemia)' },
   { value: 'SC', label: 'SC (Sickle Hemoglobin C)' },
   { value: 'SE', label: 'SE (Sickle Hemoglobin E)' },
-  { value: 'CC', label: 'CC (Normal)' },
+  { value: 'CC', label: 'CC (Hemoglobin C Disease)' },
   { value: 'AS', label: 'AS (Sickle Cell Trait)' },
   { value: 'AC', label: 'AC (Hemoglobin C Trait)' },
 ] as const;

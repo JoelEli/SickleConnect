@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Edit3, Save, X, Loader2, MessageSquare, ThumbsUp,
-  MapPin, CalendarDays, Zap, Share2, ShieldCheck, Bookmark,
+  MapPin, CalendarDays, Zap, Share2, ShieldCheck,
   Award, Stethoscope,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +63,7 @@ const Profile = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const result = await updateProfile({ fullName: editData.fullName, bio: editData.bio, genotype: editData.genotype, role: user!.role });
+      const result = await updateProfile({ fullName: editData.fullName, bio: editData.bio, genotype: editData.genotype });
       if (result.error) toast({ title: 'Error', description: result.error, variant: 'destructive' });
       else { toast({ title: 'Profile Updated' }); setIsEditing(false); }
     } catch { toast({ title: 'Error', description: 'Failed to update profile', variant: 'destructive' }); }
@@ -242,9 +242,9 @@ const Profile = () => {
             <div className="lg:col-span-8 space-y-6">
               {/* Tabs */}
               <div className="flex gap-8 border-b border-white/[0.04] px-4">
-                {['activity', 'saved', 'achievements'].map(tab => (
+                {['activity', 'badges'].map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)} className={tabClass(tab)}>
-                    {tab === 'activity' ? 'Recent Activity' : tab === 'saved' ? 'Saved Resources' : 'Achievements'}
+                    {tab === 'activity' ? 'Recent Activity' : 'Badges'}
                   </button>
                 ))}
               </div>
@@ -271,14 +271,7 @@ const Profile = () => {
                 </div>
               )}
 
-              {activeTab === 'saved' && (
-                <div className={`${glass} rounded-2xl p-12 text-center`}>
-                  <Bookmark className="h-12 w-12 text-white/10 mx-auto mb-3" />
-                  <p className="text-white/30 text-sm">No saved resources yet.</p>
-                </div>
-              )}
-
-              {activeTab === 'achievements' && (
+              {activeTab === 'badges' && (
                 <div className="space-y-4">
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${glass} rounded-2xl p-6`}>
                     <div className="flex gap-4">
@@ -294,8 +287,24 @@ const Profile = () => {
                       </div>
                     </div>
                   </motion.div>
-                  {userPosts.length >= 5 && (
+                  {userPosts.length >= 1 && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className={`${glass} rounded-2xl p-6`}>
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#7bd0ff]/10 flex-shrink-0 flex items-center justify-center text-[#7bd0ff]">
+                          <Award className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-semibold text-white mb-1">First Post</h5>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="px-3 py-1 bg-[#7bd0ff]/15 rounded-lg border border-[#7bd0ff]/20 text-[#7bd0ff] text-sm font-semibold">Storyteller</span>
+                            <p className="text-xs text-white/30">Shared your first post with the community</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  {userPosts.length >= 5 && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${glass} rounded-2xl p-6`}>
                       <div className="flex gap-4">
                         <div className="w-10 h-10 rounded-full bg-[#cabeff]/10 flex-shrink-0 flex items-center justify-center text-[#cabeff]">
                           <Award className="h-5 w-5" />
@@ -304,7 +313,23 @@ const Profile = () => {
                           <h5 className="text-sm font-semibold text-white mb-1">Active Contributor</h5>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="px-3 py-1 bg-[#cabeff]/15 rounded-lg border border-[#cabeff]/20 text-[#cabeff] text-sm font-semibold">5+ Posts</span>
-                            <p className="text-xs text-white/30">Awarded for sharing 5+ posts with the community</p>
+                            <p className="text-xs text-white/30">Awarded for sharing 5+ posts</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  {totalLikes >= 10 && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className={`${glass} rounded-2xl p-6`}>
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 rounded-full bg-rose-500/10 flex-shrink-0 flex items-center justify-center text-rose-400">
+                          <Award className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h5 className="text-sm font-semibold text-white mb-1">Loved by Community</h5>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="px-3 py-1 bg-rose-500/15 rounded-lg border border-rose-500/20 text-rose-400 text-sm font-semibold">10+ Likes</span>
+                            <p className="text-xs text-white/30">Your posts received 10+ total likes</p>
                           </div>
                         </div>
                       </div>

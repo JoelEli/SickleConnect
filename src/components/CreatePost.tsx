@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePosts } from '@/hooks/usePosts';
 import { useToast } from '@/hooks/use-toast';
-import { useSickleConnectWebSocket } from '@/shared/hooks/useWebSocket';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
-import { WEBSOCKET_EVENTS } from '@/lib/constants';
 
 const CreatePost = () => {
   const [content, setContent] = useState('');
@@ -15,7 +13,6 @@ const CreatePost = () => {
   const { createPost } = usePosts();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { sendMessage } = useSickleConnectWebSocket(user?._id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,17 +24,6 @@ const CreatePost = () => {
     if (error) {
       toast({ title: "Failed to Create Post", description: error, variant: "destructive" });
     } else {
-      try {
-        sendMessage({
-          type: WEBSOCKET_EVENTS.NEW_POST,
-          data: {
-            authorName: user?.fullName || 'Anonymous',
-            authorId: user?._id,
-            content: content.trim(),
-            timestamp: new Date().toISOString(),
-          }
-        });
-      } catch {}
       toast({ title: "Post Shared!", description: "Your post has been shared with the community" });
       setContent('');
     }
@@ -55,7 +41,7 @@ const CreatePost = () => {
           <div className="flex gap-4">
             <Avatar className="h-10 w-10 shrink-0 border border-white/10">
               <AvatarFallback className="bg-gradient-to-br from-teal-500 to-cyan-600 text-white text-sm font-semibold">
-                {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+                {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">

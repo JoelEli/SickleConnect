@@ -103,6 +103,7 @@ router.post('/', authenticateToken, async (req, res) => {
       image_url: populatedPost.imageUrl,
       likes_count: populatedPost.likesCount,
       comments_count: populatedPost.commentsCount,
+      is_liked: false,
       created_at: populatedPost.createdAt,
       profiles: {
         full_name: populatedPost.userId.fullName,

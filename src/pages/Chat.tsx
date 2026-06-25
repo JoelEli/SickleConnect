@@ -61,7 +61,7 @@ const ChatPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { isConnected } = useSickleConnectWebSocket(user?._id);
+  useSickleConnectWebSocket(user?._id);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => { scrollToBottom(); }, [messages]);

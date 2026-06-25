@@ -33,14 +33,12 @@ router.get('/', authenticateToken, async (req, res) => {
           id: post._id,
           type: 'post',
           content: post.content,
+          fullName: post.userId.fullName,
+          role: post.userId.role,
+          genotype: post.userId.genotype,
           likesCount: post.likesCount,
           commentsCount: post.commentsCount,
           createdAt: post.createdAt,
-          user: {
-            fullName: post.userId.fullName,
-            role: post.userId.role,
-            genotype: post.userId.genotype,
-          }
         });
       });
     }
