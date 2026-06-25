@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePosts } from '@/hooks/usePosts';
 import { useToast } from '@/hooks/use-toast';
 import { useSickleConnectWebSocket } from '@/shared/hooks/useWebSocket';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { WEBSOCKET_EVENTS } from '@/lib/constants';
 
 const CreatePost = () => {
@@ -19,27 +19,14 @@ const CreatePost = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!content.trim()) {
-      toast({
-        title: "Empty Post",
-        description: "Please write something to share with the community",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!content.trim()) return;
 
     setIsSubmitting(true);
     const { error } = await createPost(content.trim());
 
     if (error) {
-      toast({
-        title: "Failed to Create Post",
-        description: error,
-        variant: "destructive"
-      });
+      toast({ title: "Failed to Create Post", description: error, variant: "destructive" });
     } else {
-      // Send WebSocket notification to all connected users
       try {
         sendMessage({
           type: WEBSOCKET_EVENTS.NEW_POST,
@@ -50,50 +37,57 @@ const CreatePost = () => {
             timestamp: new Date().toISOString(),
           }
         });
-      } catch (wsError) {
-        console.log('WebSocket notification failed, but post was created successfully');
-      }
-
-      toast({
-        title: "Post Shared!",
-        description: "Your post has been shared with the community"
-      });
+      } catch {}
+      toast({ title: "Post Shared!", description: "Your post has been shared with the community" });
       setContent('');
     }
-    
     setIsSubmitting(false);
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Share Your Story</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
-            placeholder="What's on your mind? Share your experiences, ask questions, or offer support..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="min-h-[100px] resize-none"
-            maxLength={500}
-          />
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">
-              {content.length}/500 characters
-            </span>
-            <Button type="submit" disabled={isSubmitting || !content.trim()}>
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Share Post
-            </Button>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 mb-6">
+        <form onSubmit={handleSubmit}>
+          <div className="flex gap-4">
+            <Avatar className="h-10 w-10 shrink-0 border border-white/10">
+              <AvatarFallback className="bg-gradient-to-br from-teal-500 to-cyan-600 text-white text-sm font-semibold">
+                {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <textarea
+                placeholder="Share an update, question, or resource with the community..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                maxLength={500}
+                rows={3}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 resize-none focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end mt-3 pl-14">
+            <div className="flex items-center gap-3">
+              <span className={`text-xs ${content.length > 450 ? 'text-rose-400' : 'text-white/20'}`}>
+                {content.length}/500
+              </span>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting || !content.trim()}
+                className="bg-teal-500 hover:bg-teal-600 text-white border-0 px-5 rounded-lg disabled:opacity-30"
+              >
+                {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Post'}
+              </Button>
+            </div>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </motion.div>
   );
 };
 

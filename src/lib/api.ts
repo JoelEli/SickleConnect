@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from './constants';
+import { API_BASE_URL } from './config';
 
-const API_BASE = 'https://sickleconnect.onrender.com/api';
+const API_BASE = API_BASE_URL;
 
 class ApiClient {
   private baseURL: string;
@@ -77,7 +78,7 @@ class ApiClient {
   // Posts endpoints
   posts = {
     getAll: (page = 1, limit = 10) =>
-      this.request(`${API_ENDPOINTS.POSTS.LIST}?page=${page}&limit=${limit}`),
+      this.request<{ posts: any[]; pagination: any }>(`${API_ENDPOINTS.POSTS.LIST}?page=${page}&limit=${limit}`),
 
     create: (data: { content: string; imageUrl?: string }) =>
       this.request(API_ENDPOINTS.POSTS.CREATE, {
@@ -144,6 +145,10 @@ class ApiClient {
     
     getOnlineUsers: () => this.request('/chat/users/online'),
   };
+
+  // Search
+  search = (query: string, type: string = 'all') =>
+    this.request(`/search?q=${encodeURIComponent(query)}&type=${type}`);
 
   // Delete post
   deletePost = (postId: string) =>

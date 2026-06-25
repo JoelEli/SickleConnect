@@ -1,101 +1,129 @@
 import React, { useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePosts } from '@/hooks/usePosts';
 import { useSickleConnectWebSocket, useWebSocketMessageHandler } from '@/shared/hooks/useWebSocket';
 import { useAuth } from '@/hooks/useAuth';
 import PostCard from './PostCard';
 import CreatePost from './CreatePost';
 import { Loader2, Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { WEBSOCKET_EVENTS } from '@/lib/constants';
+import { staggerContainer, staggerItem } from '@/lib/animations';
 
 const PostsFeed = () => {
-  const { 
-    posts, 
-    loading, 
-    refetch, 
-    likePost, 
+  const {
+    posts,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    likePost,
     deletePost,
-    updatePostLike, 
-    updatePostCommentCount, 
+    updatePostLike,
+    updatePostCommentCount,
     addNewPost,
     removePost
   } = usePosts();
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  // Initialize WebSocket connection for real-time updates
+
   const { isConnected } = useSickleConnectWebSocket(user?._id);
 
-  // Handle real-time events
   const handleWebSocketMessage = useCallback((message: any) => {
     switch (message.type) {
       case WEBSOCKET_EVENTS.NEW_POST:
-        // Add new post to the beginning of the feed
         addNewPost(message.data.post);
-        toast({
-          title: "New Post",
-          description: `${message.data.authorName} shared a new post`,
-        });
+        toast({ title: "New Post", description: `${message.data.authorName} shared a new post` });
         break;
       case WEBSOCKET_EVENTS.POST_LIKED:
-        // Update like count in real-time
         const { postId, likesCount, isLiked } = message.data;
         updatePostLike(postId, likesCount, isLiked);
         break;
       case WEBSOCKET_EVENTS.NEW_COMMENT:
-        // Update comment count in real-time
         const { postId: commentPostId } = message.data;
         updatePostCommentCount(commentPostId);
         break;
       case WEBSOCKET_EVENTS.POST_DELETED:
-        // Remove deleted post from feed
         const { postId: deletedPostId } = message.data;
         removePost(deletedPostId);
-        toast({
-          title: "Post Deleted",
-          description: `A post was deleted by ${message.data.deletedBy}`,
-        });
         break;
     }
   }, [addNewPost, updatePostLike, updatePostCommentCount, removePost, toast]);
 
-  // Register message handler
   useWebSocketMessageHandler(handleWebSocketMessage);
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading community posts...</p>
+      <div className="text-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-500 mx-auto mb-4" />
+        <p className="text-white/30 text-sm">Loading community posts...</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* WebSocket Status Indicator */}
       {!isConnected && (
-        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-          ⚠️ Real-time updates are currently offline. Posts will update when you refresh the page.
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl text-xs text-amber-300/70"
+        >
+          Real-time updates are currently offline. Posts will update when you refresh.
+        </motion.div>
       )}
-      
+
       <CreatePost />
-      
+
       {posts.length === 0 ? (
-        <div className="text-center py-12">
-          <Heart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
-          <p className="text-muted-foreground">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="text-center py-20"
+        >
+          <Heart className="h-14 w-14 text-white/10 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white/50 mb-1">No posts yet</h3>
+          <p className="text-white/25 text-sm">
             Be the first to share your story with the SickleConnect community!
           </p>
-        </div>
+        </motion.div>
       ) : (
-        <div>
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} onDelete={deletePost} />
-          ))}
-        </div>
+        <>
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            <AnimatePresence>
+              {posts.map((post) => (
+                <motion.div
+                  key={post.id}
+                  variants={staggerItem}
+                  layout
+                  exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+                >
+                  <PostCard post={post} onDelete={deletePost} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+
+          {hasMore && (
+            <div className="text-center py-6">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="gap-2 bg-white/[0.03] border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.06]"
+              >
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {loadingMore ? 'Loading...' : 'Load More'}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

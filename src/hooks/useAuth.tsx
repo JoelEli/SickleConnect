@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { API_BASE_URL } from '@/lib/config';
 
 interface User {
   _id: string;
@@ -13,10 +14,10 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (data: { email: string; password: string; fullName: string; role: string; genotype?: string; bio?: string }) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string | null }>;
+  signUp: (data: { email: string; password: string; fullName: string; role: string; genotype?: string; bio?: string }) => Promise<{ error?: string | null }>;
   signOut: () => void;
-  updateProfile: (data: { role: string; genotype?: string; bio?: string; fullName?: string }) => Promise<{ error?: string }>;
+  updateProfile: (data: { role?: string; genotype?: string; bio?: string; fullName?: string }) => Promise<{ error?: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = 'https://sickleconnect.onrender.com/api';
+  const API_BASE = API_BASE_URL;
 
   useEffect(() => {
     // Check for existing token
@@ -123,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (data: { role: string; genotype?: string; bio?: string }) => {
+  const updateProfile = async (data: { role?: string; genotype?: string; bio?: string; fullName?: string }) => {
     const token = localStorage.getItem('token');
     
     try {

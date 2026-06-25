@@ -21,17 +21,42 @@ export interface Post {
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { user } = useAuth();
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (pageNum = 1, append = false) => {
     try {
-      const data = await apiClient.posts.getAll();
-      setPosts(data);
+      const data = await apiClient.posts.getAll(pageNum, 10) as any;
+      const fetched = data.posts || data;
+      const postsArray = Array.isArray(fetched) ? fetched : [];
+
+      if (append) {
+        setPosts(prev => [...prev, ...postsArray]);
+      } else {
+        setPosts(postsArray);
+      }
+
+      if (data.pagination) {
+        setHasMore(data.pagination.hasMore);
+      } else {
+        setHasMore(false);
+      }
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await fetchPosts(nextPage, true);
   };
 
   const createPost = async (content: string, imageUrl?: string) => {
@@ -39,7 +64,7 @@ export function usePosts() {
 
     try {
       await apiClient.posts.create({ content, imageUrl });
-      fetchPosts(); // Refresh posts
+      fetchPosts();
       return { error: null };
     } catch (error: any) {
       return { error: error.message };
@@ -50,56 +75,50 @@ export function usePosts() {
     if (!user) return { error: 'Not authenticated' };
 
     try {
-      const updatedPost = await apiClient.posts.like(postId);
-      
-      // Update the post in the local state
-      setPosts(prevPosts => 
-        prevPosts.map(post => 
-          post.id === postId 
+      const updatedPost = await apiClient.posts.like(postId) as any;
+
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
             ? { ...post, likes_count: updatedPost.likes_count, is_liked: updatedPost.is_liked }
             : post
         )
       );
-      
+
       return { error: null };
     } catch (error: any) {
       return { error: error.message };
     }
   };
 
-  // Function to update post like status from WebSocket
   const updatePostLike = useCallback((postId: string, likesCount: number, isLiked: boolean) => {
-    setPosts(prevPosts => 
-      prevPosts.map(post => 
-        post.id === postId 
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
           ? { ...post, likes_count: likesCount, is_liked: isLiked }
           : post
       )
     );
   }, []);
 
-  // Function to update post comment count from WebSocket
   const updatePostCommentCount = useCallback((postId: string) => {
-    setPosts(prevPosts => 
-      prevPosts.map(post => 
-        post.id === postId 
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
           ? { ...post, comments_count: post.comments_count + 1 }
           : post
       )
     );
   }, []);
 
-  // Function to add new post from WebSocket
   const addNewPost = useCallback((newPost: Post) => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   }, []);
 
-  // Function to remove post from WebSocket
   const removePost = useCallback((postId: string) => {
     setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
   }, []);
 
-  // Function to delete post
   const deletePost = async (postId: string) => {
     try {
       await apiClient.deletePost(postId);
@@ -117,6 +136,9 @@ export function usePosts() {
   return {
     posts,
     loading,
+    loadingMore,
+    hasMore,
+    loadMore,
     createPost,
     likePost,
     deletePost,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { WEBSOCKET_EVENTS } from '@/lib/constants';
+import { WS_BASE_URL } from '@/lib/config';
 
 interface WebSocketMessage {
   type: string;
@@ -132,7 +133,7 @@ const globalMessageHandlers = new Set<(message: WebSocketMessage) => void>();
 // Specific hook for SickleConnect WebSocket events
 export function useSickleConnectWebSocket(userId?: string) {
   const [isConnected, setIsConnected] = useState(false);
-  const wsUrl = `wss://sickleconnect.onrender.com/ws${userId ? `?userId=${userId}` : ''}`;
+  const wsUrl = `${WS_BASE_URL}/ws${userId ? `?userId=${userId}` : ''}`;
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     // This will be called for all registered handlers

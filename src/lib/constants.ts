@@ -1,12 +1,10 @@
 export const ROUTES = {
-  HOME: '/',
+  HOME: '/home',
   COMMUNITY: '/community',
   AUTH: '/auth',
   ABOUT: '/about',
   PROFILE: '/profile',
-  SETTINGS: '/settings',
   SEARCH: '/search',
-  NOTIFICATIONS: '/notifications',
   CHAT: '/chat',
 } as const;
 

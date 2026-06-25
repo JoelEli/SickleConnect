@@ -5,37 +5,42 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Global WebSocket clients reference (will be set by server.js)
 let wsClients = new Map();
 
-// Function to set WebSocket clients reference
 export const setWebSocketClients = (clients) => {
   wsClients = clients;
 };
 
-// Function to broadcast to all connected clients
 const broadcastToAll = (message) => {
   const messageStr = JSON.stringify(message);
   wsClients.forEach((client) => {
-    if (client.readyState === 1) { // WebSocket.OPEN
+    if (client.readyState === 1) {
       client.send(messageStr);
     }
   });
 };
 
-// Get all posts
+// Get all posts (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user._id;
-    
-    const posts = await Post.find()
-      .populate('userId', 'fullName role genotype avatarUrl')
-      .populate('comments.userId', 'fullName role genotype avatarUrl')
-      .sort({ createdAt: -1 });
-    
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await Promise.all([
+      Post.find()
+        .populate('userId', 'fullName role genotype avatarUrl')
+        .populate('comments.userId', 'fullName role genotype avatarUrl')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Post.countDocuments()
+    ]);
+
     const formattedPosts = posts.map(post => {
       const isLiked = post.likes && post.likes.some(likeId => likeId.toString() === userId.toString());
-      
+
       return {
         id: post._id,
         user_id: post.userId._id,
@@ -52,8 +57,17 @@ router.get('/', authenticateToken, async (req, res) => {
         }
       };
     });
-    
-    res.json(formattedPosts);
+
+    res.json({
+      posts: formattedPosts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: skip + posts.length < total
+      }
+    });
   } catch (error) {
     console.error('Get posts error:', error);
     res.status(500).json({ message: 'Failed to fetch posts. Please try again.' });
@@ -64,25 +78,24 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { content, imageUrl } = req.body;
-    
-    // Validate content
+
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ message: 'Post content is required' });
     }
-    
+
     if (content.length > 1000) {
       return res.status(400).json({ message: 'Post content must be less than 1000 characters' });
     }
-    
+
     const post = await Post.create({
       userId: req.user._id,
       content: content.trim(),
       imageUrl
     });
-    
+
     const populatedPost = await Post.findById(post._id)
       .populate('userId', 'fullName role genotype avatarUrl');
-    
+
     const formattedPost = {
       id: populatedPost._id,
       user_id: populatedPost.userId._id,
@@ -98,7 +111,6 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     };
 
-    // Broadcast new post to all clients
     broadcastToAll({
       type: 'new_post',
       data: {
@@ -106,7 +118,7 @@ router.post('/', authenticateToken, async (req, res) => {
         authorName: req.user.fullName
       }
     });
-    
+
     res.status(201).json(formattedPost);
   } catch (error) {
     console.error('Create post error:', error);
@@ -125,15 +137,12 @@ router.post('/:postId/like', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Check if user already liked the post
     const isLiked = post.likes && post.likes.includes(userId);
-    
+
     if (isLiked) {
-      // Unlike: remove user from likes array
       post.likes = post.likes.filter(id => id.toString() !== userId.toString());
       post.likesCount = Math.max(0, post.likesCount - 1);
     } else {
-      // Like: add user to likes array
       if (!post.likes) post.likes = [];
       post.likes.push(userId);
       post.likesCount = post.likesCount + 1;
@@ -141,7 +150,6 @@ router.post('/:postId/like', authenticateToken, async (req, res) => {
 
     await post.save();
 
-    // Get updated post with user info
     const updatedPost = await Post.findById(postId)
       .populate('userId', 'fullName role genotype avatarUrl');
 
@@ -153,7 +161,7 @@ router.post('/:postId/like', authenticateToken, async (req, res) => {
       likes_count: updatedPost.likesCount,
       comments_count: updatedPost.commentsCount,
       created_at: updatedPost.createdAt,
-      is_liked: !isLiked, // Return the new like status
+      is_liked: !isLiked,
       profiles: {
         full_name: updatedPost.userId.fullName,
         role: updatedPost.userId.role,
@@ -161,7 +169,6 @@ router.post('/:postId/like', authenticateToken, async (req, res) => {
       }
     };
 
-    // Broadcast like event to all clients
     broadcastToAll({
       type: 'post_liked',
       data: {
@@ -181,7 +188,7 @@ router.post('/:postId/like', authenticateToken, async (req, res) => {
 });
 
 // Get comments for a post
-router.get('/:postId/comments', async (req, res) => {
+router.get('/:postId/comments', authenticateToken, async (req, res) => {
   try {
     const { postId } = req.params;
 
@@ -217,7 +224,6 @@ router.post('/:postId/comments', authenticateToken, async (req, res) => {
     const { content } = req.body;
     const userId = req.user._id;
 
-    // Validate comment content
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ message: 'Comment content is required' });
     }
@@ -231,7 +237,6 @@ router.post('/:postId/comments', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Add comment
     const newComment = {
       userId: userId,
       content: content.trim(),
@@ -244,7 +249,6 @@ router.post('/:postId/comments', authenticateToken, async (req, res) => {
 
     await post.save();
 
-    // Get updated post with user info
     const updatedPost = await Post.findById(postId)
       .populate('userId', 'fullName role genotype avatarUrl')
       .populate('comments.userId', 'fullName role genotype avatarUrl');
@@ -263,7 +267,6 @@ router.post('/:postId/comments', authenticateToken, async (req, res) => {
       }
     };
 
-    // Broadcast comment event to all clients
     broadcastToAll({
       type: 'new_comment',
       data: {
@@ -294,14 +297,12 @@ router.delete('/:postId', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Check if user is the author of the post
     if (post.userId.toString() !== userId.toString()) {
       return res.status(403).json({ message: 'You can only delete your own posts' });
     }
 
     await Post.findByIdAndDelete(postId);
 
-    // Broadcast post deletion to all clients
     broadcastToAll({
       type: 'post_deleted',
       data: {

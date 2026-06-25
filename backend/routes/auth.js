@@ -1,72 +1,76 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+function getJwtSecret() {
+  return process.env.JWT_SECRET;
+}
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Register new user
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
-    console.log('Register request received:', { body: req.body, headers: req.headers });
     const { email, password, fullName, role, genotype, bio } = req.body;
 
-    // Validate required fields
     if (!email || !password || !fullName || !role) {
-      return res.status(400).json({ 
-        message: 'Email, password, full name, and role are required' 
+      return res.status(400).json({
+        message: 'Email, password, full name, and role are required'
       });
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        message: 'Please provide a valid email address' 
+      return res.status(400).json({
+        message: 'Please provide a valid email address'
       });
     }
 
-    // Validate role
     if (!['patient', 'doctor'].includes(role)) {
-      return res.status(400).json({ 
-        message: 'Role must be either "patient" or "doctor"' 
+      return res.status(400).json({
+        message: 'Role must be either "patient" or "doctor"'
       });
     }
 
-    // Validate patient genotype requirement
     if (role === 'patient' && !genotype) {
-      return res.status(400).json({ 
-        message: 'Genotype is required for patients' 
+      return res.status(400).json({
+        message: 'Genotype is required for patients'
       });
     }
 
-    // Validate genotype values
     if (genotype && !['SS', 'SC', 'SE', 'CC', 'AS', 'AC'].includes(genotype)) {
-      return res.status(400).json({ 
-        message: 'Invalid genotype value' 
+      return res.status(400).json({
+        message: 'Invalid genotype value'
       });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Validate password length and strength
     if (password.length < 6) {
-      return res.status(400).json({ 
-        message: 'Password must be at least 6 characters long' 
+      return res.status(400).json({
+        message: 'Password must be at least 6 characters long'
       });
     }
 
-    // Validate full name
     if (fullName.trim().length < 2) {
-      return res.status(400).json({ 
-        message: 'Full name must be at least 2 characters long' 
+      return res.status(400).json({
+        message: 'Full name must be at least 2 characters long'
       });
     }
 
-    // Create new user
     const user = new User({
       email,
       password,
@@ -78,10 +82,9 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -100,34 +103,29 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
-    console.log('Login request received:', { body: req.body, headers: req.headers });
     const { email, password } = req.body;
 
-    // Validate required fields
     if (!email || !password) {
-      return res.status(400).json({ 
-        message: 'Email and password are required' 
+      return res.status(400).json({
+        message: 'Email and password are required'
       });
     }
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -143,55 +141,43 @@ router.post('/login', async (req, res) => {
 });
 
 // Check authentication status
-router.get('/me', async (req, res) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findById(decoded.userId);
-    
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-    
-    res.json({ user });
-  } catch (error) {
-    res.status(403).json({ message: 'Invalid token' });
-  }
+router.get('/me', authenticateToken, async (req, res) => {
+  res.json({ user: req.user });
 });
 
-// Update user profile
-router.put('/profile', async (req, res) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
+// Update user profile (role changes are NOT allowed)
+router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const { role, genotype, bio, fullName } = req.body;
-    
+    const { genotype, bio, fullName } = req.body;
     const updateData = {};
-    if (role) updateData.role = role;
-    if (fullName) updateData.fullName = fullName;
-    if (bio) updateData.bio = bio;
-    if (role === 'patient' && genotype) {
+
+    if (fullName !== undefined) {
+      if (typeof fullName !== 'string' || fullName.trim().length < 2) {
+        return res.status(400).json({ message: 'Full name must be at least 2 characters' });
+      }
+      updateData.fullName = fullName.trim();
+    }
+
+    if (bio !== undefined) {
+      if (typeof bio === 'string' && bio.length > 500) {
+        return res.status(400).json({ message: 'Bio must be less than 500 characters' });
+      }
+      updateData.bio = typeof bio === 'string' ? bio.trim() : '';
+    }
+
+    if (genotype) {
+      if (!['SS', 'SC', 'SE', 'CC', 'AS', 'AC'].includes(genotype)) {
+        return res.status(400).json({ message: 'Invalid genotype value' });
+      }
       updateData.genotype = genotype;
     }
-    
+
     const user = await User.findByIdAndUpdate(
-      decoded.userId,
+      req.user._id,
       updateData,
       { new: true }
     );
-    
+
     res.json({ user });
   } catch (error) {
     console.error('Profile update error:', error);
