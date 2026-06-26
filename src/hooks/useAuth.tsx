@@ -9,6 +9,7 @@ interface User {
   genotype?: string;
   bio?: string;
   avatarUrl?: string;
+  coverUrl?: string;
 }
 
 interface AuthContextType {
@@ -17,7 +18,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error?: string | null }>;
   signUp: (data: { email: string; password: string; fullName: string; role: string; genotype?: string; bio?: string }) => Promise<{ error?: string | null }>;
   signOut: () => void;
-  updateProfile: (data: { role?: string; genotype?: string; bio?: string; fullName?: string }) => Promise<{ error?: string | null }>;
+  updateProfile: (data: { role?: string; genotype?: string; bio?: string; fullName?: string; avatarUrl?: string; coverUrl?: string }) => Promise<{ error?: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProfile = async (data: { role?: string; genotype?: string; bio?: string; fullName?: string }) => {
+  const updateProfile = async (data: { role?: string; genotype?: string; bio?: string; fullName?: string; avatarUrl?: string; coverUrl?: string }) => {
     const token = localStorage.getItem('token');
     
     try {

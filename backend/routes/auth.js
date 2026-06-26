@@ -148,7 +148,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 // Update user profile (role changes are NOT allowed)
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { genotype, bio, fullName } = req.body;
+    const { genotype, bio, fullName, avatarUrl, coverUrl } = req.body;
     const updateData = {};
 
     if (fullName !== undefined) {
@@ -170,6 +170,20 @@ router.put('/profile', authenticateToken, async (req, res) => {
         return res.status(400).json({ message: 'Invalid genotype value' });
       }
       updateData.genotype = genotype;
+    }
+
+    if (avatarUrl !== undefined) {
+      if (avatarUrl && typeof avatarUrl === 'string' && !avatarUrl.startsWith('data:image/')) {
+        return res.status(400).json({ message: 'Invalid avatar image format' });
+      }
+      updateData.avatarUrl = avatarUrl || '';
+    }
+
+    if (coverUrl !== undefined) {
+      if (coverUrl && typeof coverUrl === 'string' && !coverUrl.startsWith('data:image/')) {
+        return res.status(400).json({ message: 'Invalid cover image format' });
+      }
+      updateData.coverUrl = coverUrl || '';
     }
 
     const user = await User.findByIdAndUpdate(

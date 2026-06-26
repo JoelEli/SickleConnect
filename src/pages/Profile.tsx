@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Edit3, Save, X, Loader2, MessageSquare, ThumbsUp,
+  Edit3, Loader2, MessageSquare, ThumbsUp,
   MapPin, CalendarDays, Zap, Share2, ShieldCheck,
-  Award, Stethoscope, User, Mail, FileText, Dna, Heart,
+  Award, Stethoscope, Mail, ChevronLeft, Camera, ImagePlus,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { GENOTYPES } from '@/lib/constants';
@@ -25,11 +24,16 @@ interface Post {
   comments_count: number;
   is_liked?: boolean;
   created_at: string;
-  profiles: {
-    full_name: string;
-    role: 'patient' | 'doctor';
-    genotype?: string;
-  };
+  profiles: { full_name: string; role: 'patient' | 'doctor'; genotype?: string };
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 const Profile = () => {
@@ -40,11 +44,13 @@ const Profile = () => {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('activity');
-  const [editData, setEditData] = useState({ fullName: '', bio: '', genotype: '' });
+  const [editData, setEditData] = useState({ fullName: '', bio: '', genotype: '', avatarUrl: '', coverUrl: '' });
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
-      setEditData({ fullName: user.fullName || '', bio: user.bio || '', genotype: user.genotype || '' });
+      setEditData({ fullName: user.fullName || '', bio: user.bio || '', genotype: user.genotype || '', avatarUrl: user.avatarUrl || '', coverUrl: user.coverUrl || '' });
       loadUserPosts();
     }
   }, [user]);
@@ -57,26 +63,38 @@ const Profile = () => {
     } catch {} finally { setPostsLoading(false); }
   };
 
-  const handleSave = async () => {
-    if (!editData.fullName.trim() || editData.fullName.trim().length < 2) {
-      toast({ title: 'Validation Error', description: 'Full name must be at least 2 characters.', variant: 'destructive' });
+  const handleImageSelect = async (file: File, field: 'avatarUrl' | 'coverUrl') => {
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Error', description: 'Please select an image file.', variant: 'destructive' });
       return;
     }
-    if (editData.bio.length > 500) {
-      toast({ title: 'Validation Error', description: 'Bio must be under 500 characters.', variant: 'destructive' });
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Image must be under 2MB.', variant: 'destructive' });
+      return;
+    }
+    const dataUrl = await readFileAsDataUrl(file);
+    setEditData(p => ({ ...p, [field]: dataUrl }));
+  };
+
+  const handleSave = async () => {
+    if (!editData.fullName.trim() || editData.fullName.trim().length < 2) {
+      toast({ title: 'Error', description: 'Name must be at least 2 characters.', variant: 'destructive' });
       return;
     }
     setIsSaving(true);
     try {
-      const result = await updateProfile({ fullName: editData.fullName.trim(), bio: editData.bio.trim(), genotype: editData.genotype });
+      const payload: any = { fullName: editData.fullName.trim(), bio: editData.bio.trim(), genotype: editData.genotype };
+      if (editData.avatarUrl !== (user?.avatarUrl || '')) payload.avatarUrl = editData.avatarUrl;
+      if (editData.coverUrl !== (user?.coverUrl || '')) payload.coverUrl = editData.coverUrl;
+      const result = await updateProfile(payload);
       if (result.error) toast({ title: 'Error', description: result.error, variant: 'destructive' });
-      else { toast({ title: 'Profile Updated', description: 'Your changes have been saved.' }); setIsEditing(false); }
+      else { toast({ title: 'Profile saved.' }); setIsEditing(false); }
     } catch { toast({ title: 'Error', description: 'Failed to update profile', variant: 'destructive' }); }
     finally { setIsSaving(false); }
   };
 
   const openEdit = () => {
-    setEditData({ fullName: user?.fullName || '', bio: user?.bio || '', genotype: user?.genotype || '' });
+    setEditData({ fullName: user?.fullName || '', bio: user?.bio || '', genotype: user?.genotype || '', avatarUrl: user?.avatarUrl || '', coverUrl: user?.coverUrl || '' });
     setIsEditing(true);
   };
 
@@ -88,32 +106,199 @@ const Profile = () => {
   const isDoctor = user.role === 'doctor';
   const glass = 'bg-[#161f35]/60 backdrop-blur-xl border border-white/[0.1]';
   const tabClass = (t: string) => `pb-4 text-sm font-semibold transition-colors relative ${activeTab === t ? 'text-[#cabeff] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#cabeff]' : 'text-white/40 hover:text-white/60'}`;
-  const inputClass = 'w-full bg-[#222a3e] border border-[#484555] text-white rounded-xl py-3.5 px-4 text-sm focus:outline-none focus:ring-1 focus:ring-[#cabeff] focus:border-[#cabeff] transition-all placeholder:text-white/20';
-  const labelClass = 'block text-xs font-semibold text-white/40 uppercase tracking-[0.1em] mb-2';
+  const avatarGradient = isDoctor ? 'from-teal-500 to-cyan-600' : 'from-violet-500 to-purple-600';
+  const displayAvatar = user.avatarUrl;
+  const displayCover = user.coverUrl;
 
   return (
     <PageWrapper>
       <div className="min-h-screen bg-[#0b1326] text-[#dbe2fd]">
         <DarkNavbar />
 
+        {/* Hidden file inputs */}
+        <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleImageSelect(e.target.files[0], 'avatarUrl'); e.target.value = ''; }} />
+        <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleImageSelect(e.target.files[0], 'coverUrl'); e.target.value = ''; }} />
+
+        {/* ===== INSTAGRAM-STYLE EDIT PROFILE ===== */}
+        <AnimatePresence>
+          {isEditing && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[80] bg-[#0b1326] overflow-y-auto"
+            >
+              {/* Top Bar */}
+              <div className="sticky top-0 z-10 bg-[#0b1326]/90 backdrop-blur-xl border-b border-white/[0.06]">
+                <div className="max-w-lg mx-auto flex items-center justify-between h-14 px-4">
+                  <button onClick={() => setIsEditing(false)} className="text-white/60 hover:text-white transition-colors flex items-center gap-1 text-sm">
+                    <ChevronLeft className="h-5 w-5" /> Cancel
+                  </button>
+                  <h2 className="text-base font-bold text-white">Edit Profile</h2>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving || !editData.fullName.trim() || editData.fullName.trim().length < 2}
+                    className="text-sm font-bold text-[#7bd0ff] hover:text-[#38bdf8] transition-colors disabled:text-white/20"
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Done'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-w-lg mx-auto pb-20">
+                {/* Cover Photo */}
+                <div
+                  onClick={() => coverInputRef.current?.click()}
+                  className="relative h-40 cursor-pointer group overflow-hidden"
+                >
+                  {editData.coverUrl ? (
+                    <img src={editData.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#161f35] to-[#222a3e]" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <ImagePlus className="h-5 w-5 text-white" />
+                    <span className="text-sm font-semibold text-white">Change Cover Photo</span>
+                  </div>
+                </div>
+
+                {/* Avatar Section */}
+                <div className="flex flex-col items-center -mt-12 relative z-10">
+                  <div
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="relative group cursor-pointer"
+                  >
+                    <div className={`w-24 h-24 rounded-full border-4 border-[#0b1326] shadow-xl overflow-hidden ${!editData.avatarUrl ? `bg-gradient-to-br ${avatarGradient} flex items-center justify-center` : ''}`}>
+                      {editData.avatarUrl ? (
+                        <img src={editData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-3xl font-bold text-white">
+                          {(editData.fullName?.charAt(0) || 'U').toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Camera className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <button onClick={() => avatarInputRef.current?.click()} className="mt-3 text-sm font-bold text-[#7bd0ff]">
+                    Change profile photo
+                  </button>
+                </div>
+
+                {/* Form Fields */}
+                <div className="mt-6 border-t border-white/[0.06]">
+                  {/* Name */}
+                  <div className="flex items-center px-4 py-3.5 border-b border-white/[0.04]">
+                    <label className="w-28 shrink-0 text-sm text-white/40">Name</label>
+                    <input
+                      value={editData.fullName}
+                      onChange={(e) => setEditData(p => ({ ...p, fullName: e.target.value }))}
+                      placeholder="Name"
+                      className="flex-1 bg-transparent text-sm text-white placeholder:text-white/15 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Bio */}
+                  <div className="flex items-start px-4 py-3.5 border-b border-white/[0.04]">
+                    <label className="w-28 shrink-0 text-sm text-white/40 pt-0.5">Bio</label>
+                    <div className="flex-1">
+                      <textarea
+                        value={editData.bio}
+                        onChange={(e) => setEditData(p => ({ ...p, bio: e.target.value }))}
+                        placeholder="Write a short bio..."
+                        rows={3}
+                        maxLength={500}
+                        className="w-full bg-transparent text-sm text-white placeholder:text-white/15 focus:outline-none resize-none leading-relaxed"
+                      />
+                      <p className={`text-[11px] text-right ${editData.bio.length > 450 ? 'text-[#ffb4ab]' : 'text-white/15'}`}>
+                        {editData.bio.length}/500
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Email (read-only) */}
+                  <div className="flex items-center px-4 py-3.5 border-b border-white/[0.04]">
+                    <label className="w-28 shrink-0 text-sm text-white/40">Email</label>
+                    <span className="flex-1 text-sm text-white/25">{user.email}</span>
+                  </div>
+
+                  {/* Role (read-only) */}
+                  <div className="flex items-center px-4 py-3.5 border-b border-white/[0.04]">
+                    <label className="w-28 shrink-0 text-sm text-white/40">Role</label>
+                    <span className="flex-1 text-sm text-white/25 capitalize">{user.role}</span>
+                  </div>
+
+                  {/* Genotype (patients only) */}
+                  {user.role === 'patient' && (
+                    <div className="flex items-start px-4 py-3.5 border-b border-white/[0.04]">
+                      <label className="w-28 shrink-0 text-sm text-white/40 pt-0.5">Genotype</label>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap gap-2">
+                          {GENOTYPES.map(g => (
+                            <button
+                              key={g.value}
+                              type="button"
+                              onClick={() => setEditData(p => ({ ...p, genotype: g.value }))}
+                              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                                editData.genotype === g.value
+                                  ? 'bg-[#7bd0ff]/15 text-[#7bd0ff] border border-[#7bd0ff]/40'
+                                  : 'bg-white/[0.04] text-white/30 border border-white/[0.06] hover:text-white/50'
+                              }`}
+                            >
+                              {g.value}
+                            </button>
+                          ))}
+                        </div>
+                        {editData.genotype && (
+                          <p className="text-[11px] text-white/20 mt-2">
+                            {GENOTYPES.find(g => g.value === editData.genotype)?.label}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 px-4">
+                  <p className="text-xs text-white/15 leading-relaxed">
+                    Photos must be under 2MB. Role and email are set during registration and cannot be changed.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ===== PROFILE PAGE ===== */}
         <main className="pb-16">
-          {/* Hero Banner */}
+          {/* Hero Banner with Cover Photo */}
           <section className="relative w-full h-[280px] md:h-[320px] mb-24">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0b1326] to-[#161f35] overflow-hidden">
-              <div className="absolute inset-0 opacity-30" style={{
-                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(202,190,255,0.08) 1px, transparent 0)',
-                backgroundSize: '32px 32px'
-              }} />
+            <div className="absolute inset-0 overflow-hidden">
+              {displayCover ? (
+                <img src={displayCover} alt="Cover" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#0b1326] to-[#161f35]">
+                  <div className="absolute inset-0 opacity-30" style={{
+                    backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(202,190,255,0.08) 1px, transparent 0)',
+                    backgroundSize: '32px 32px'
+                  }} />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1326] via-[#0b1326]/40 to-transparent" />
               <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-[#603de2]/10 rounded-full blur-[120px]" />
-              <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-[#38bdf8]/8 rounded-full blur-[100px]" />
             </div>
 
             <div className="max-w-[1200px] mx-auto px-6 md:px-10 relative h-full">
               <div className="absolute -bottom-16 left-6 md:left-10 flex flex-col md:flex-row items-end gap-6">
                 <div className={`w-36 h-36 md:w-40 md:h-40 rounded-full border-4 border-[#0b1326] shadow-2xl overflow-hidden ${glass}`}>
-                  <div className={`w-full h-full flex items-center justify-center text-4xl font-bold ${isDoctor ? 'bg-gradient-to-br from-teal-500 to-cyan-600' : 'bg-gradient-to-br from-violet-500 to-purple-600'} text-white`}>
-                    {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
-                  </div>
+                  {displayAvatar ? (
+                    <img src={displayAvatar} alt={user.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center text-4xl font-bold bg-gradient-to-br ${avatarGradient} text-white`}>
+                      {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
                 </div>
                 <div className="pb-4 space-y-1">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -129,218 +314,23 @@ const Profile = () => {
                 </div>
               </div>
 
-              <div className="absolute bottom-4 right-6 md:right-10 hidden md:flex gap-3">
+              <div className="absolute bottom-4 right-6 md:right-10 flex gap-3">
                 <button onClick={openEdit} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#7c5dff] to-[#38bdf8] shadow-[0_0_20px_rgba(124,93,255,0.3)] hover:scale-[1.02] active:scale-95 transition-all">
                   <Edit3 className="h-4 w-4" /> Edit Profile
                 </button>
                 <button
                   onClick={() => { navigator.share ? navigator.share({ title: user.fullName, url: window.location.href }) : navigator.clipboard.writeText(window.location.href); }}
-                  className={`${glass} flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:bg-white/5 active:scale-95 transition-all`}
+                  className={`${glass} hidden md:flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:bg-white/5 active:scale-95 transition-all`}
                 >
-                  <Share2 className="h-4 w-4" /> Share Profile
-                </button>
-              </div>
-
-              {/* Mobile edit button */}
-              <div className="absolute bottom-4 right-6 md:hidden">
-                <button onClick={openEdit} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-[#7c5dff] to-[#38bdf8] shadow-lg">
-                  <Edit3 className="h-3.5 w-3.5" /> Edit
+                  <Share2 className="h-4 w-4" /> Share
                 </button>
               </div>
             </div>
           </section>
 
-          {/* === Edit Profile Modal === */}
-          <AnimatePresence>
-            {isEditing && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-                onClick={(e) => { if (e.target === e.currentTarget) setIsEditing(false); }}
-              >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-full max-w-[560px] max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl"
-                  style={{ background: 'rgba(23, 31, 51, 0.85)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.1)' }}
-                >
-                  {/* Modal Header */}
-                  <div className="flex items-center justify-between p-6 border-b border-white/[0.06]">
-                    <div>
-                      <h2 className="text-xl font-bold text-white">Edit Profile</h2>
-                      <p className="text-xs text-white/30 mt-1">Update your personal information</p>
-                    </div>
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="h-10 w-10 rounded-xl flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  {/* Modal Body */}
-                  <div className="p-6 space-y-6">
-                    {/* Avatar Preview */}
-                    <div className="flex items-center gap-5 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 ${isDoctor ? 'bg-gradient-to-br from-teal-500 to-cyan-600' : 'bg-gradient-to-br from-violet-500 to-purple-600'}`}>
-                        {(editData.fullName?.charAt(0) || user.fullName?.charAt(0) || 'U').toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{editData.fullName || user.fullName}</p>
-                        <p className="text-xs text-white/30 capitalize">{user.role}{editData.genotype ? ` · ${editData.genotype}` : ''}</p>
-                        <p className="text-[11px] text-white/20 mt-0.5">{user.email}</p>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${isDoctor ? 'bg-teal-500/15 text-teal-400 border border-teal-500/20' : 'bg-[#cabeff]/15 text-[#cabeff] border border-[#cabeff]/20'}`}>
-                        {user.role}
-                      </span>
-                    </div>
-
-                    {/* Personal Information Section */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <User className="h-4 w-4 text-[#cabeff]" />
-                        <h3 className="text-sm font-semibold text-white">Personal Information</h3>
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <label className={labelClass}>Full Name</label>
-                          <div className="relative">
-                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-                            <input
-                              value={editData.fullName}
-                              onChange={(e) => setEditData(p => ({ ...p, fullName: e.target.value }))}
-                              placeholder="Your full name"
-                              className={`${inputClass} pl-11`}
-                            />
-                          </div>
-                          {editData.fullName.trim().length > 0 && editData.fullName.trim().length < 2 && (
-                            <p className="text-xs text-[#ffb4ab] mt-1.5 ml-1">Name must be at least 2 characters</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className={labelClass}>Email Address</label>
-                          <div className="relative">
-                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-                            <input
-                              value={user.email}
-                              disabled
-                              className={`${inputClass} pl-11 opacity-40 cursor-not-allowed`}
-                            />
-                          </div>
-                          <p className="text-[11px] text-white/20 mt-1.5 ml-1">Email cannot be changed</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bio Section */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <FileText className="h-4 w-4 text-[#7bd0ff]" />
-                        <h3 className="text-sm font-semibold text-white">About You</h3>
-                      </div>
-                      <div>
-                        <label className={labelClass}>Bio</label>
-                        <textarea
-                          value={editData.bio}
-                          onChange={(e) => setEditData(p => ({ ...p, bio: e.target.value }))}
-                          placeholder="Tell the community about yourself, your journey, your interests..."
-                          rows={4}
-                          maxLength={500}
-                          className={`${inputClass} resize-none`}
-                        />
-                        <div className="flex justify-between mt-1.5 px-1">
-                          <p className="text-[11px] text-white/20">Share what matters to you</p>
-                          <span className={`text-[11px] ${editData.bio.length > 450 ? 'text-[#ffb4ab]' : 'text-white/20'}`}>
-                            {editData.bio.length}/500
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Medical Information Section (Patient only) */}
-                    {user.role === 'patient' && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <Dna className="h-4 w-4 text-[#ffb77f]" />
-                          <h3 className="text-sm font-semibold text-white">Medical Information</h3>
-                        </div>
-                        <div>
-                          <label className={labelClass}>Genotype</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {GENOTYPES.map(g => {
-                              const active = editData.genotype === g.value;
-                              return (
-                                <button
-                                  key={g.value}
-                                  type="button"
-                                  onClick={() => setEditData(p => ({ ...p, genotype: g.value }))}
-                                  className={`py-3 rounded-xl text-sm font-semibold transition-all border ${
-                                    active
-                                      ? 'border-[#7bd0ff] bg-[#7bd0ff]/10 text-[#7bd0ff] shadow-[0_0_12px_rgba(123,208,255,0.15)]'
-                                      : 'border-[#484555] text-white/40 hover:border-white/20 hover:text-white/60'
-                                  }`}
-                                >
-                                  {g.value}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <p className="text-[11px] text-white/20 mt-2 ml-1">
-                            {GENOTYPES.find(g => g.value === editData.genotype)?.label || 'Select your genotype'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Role Display (Read-only) */}
-                    <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDoctor ? 'bg-teal-500/10 text-teal-400' : 'bg-[#cabeff]/10 text-[#cabeff]'}`}>
-                            {isDoctor ? <Stethoscope className="h-5 w-5" /> : <Heart className="h-5 w-5" />}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-white">{isDoctor ? 'Doctor' : 'Patient'}</p>
-                            <p className="text-[11px] text-white/25">Role cannot be changed</p>
-                          </div>
-                        </div>
-                        <ShieldCheck className="h-4 w-4 text-white/15" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Modal Footer */}
-                  <div className="flex items-center justify-between p-6 border-t border-white/[0.06]">
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="px-6 py-3 rounded-xl text-sm font-semibold text-white/50 hover:text-white hover:bg-white/5 transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={isSaving || !editData.fullName.trim() || editData.fullName.trim().length < 2}
-                      className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#7c5dff] to-[#38bdf8] shadow-lg shadow-[#7c5dff]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      {isSaving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <div className="max-w-[1200px] mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column */}
             <div className="lg:col-span-4 space-y-6">
-              {/* About Card */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className={`${glass} rounded-2xl p-6`}>
                 <h3 className="text-xl font-semibold text-[#cabeff] mb-4">About</h3>
                 <p className="text-sm text-white/50 leading-relaxed mb-6">
@@ -362,7 +352,6 @@ const Profile = () => {
                 </div>
               </motion.div>
 
-              {/* Genotype Card */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 className={`${glass} rounded-2xl p-6 border-l-4 border-l-[#7bd0ff]`}
               >
@@ -381,7 +370,6 @@ const Profile = () => {
                 </div>
               </motion.div>
 
-              {/* Stats */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-4">
                 {[
                   { icon: Zap, value: totalLikes + totalComments, label: 'Impact Score', color: 'text-[#cabeff]', bg: 'bg-[#cabeff]/10' },
@@ -437,7 +425,7 @@ const Profile = () => {
                 <div className="space-y-4">
                   {[
                     { title: 'Community Member', badge: 'Welcome Badge', desc: 'Earned for joining SickleConnect', color: '#ffb77f', show: true },
-                    { title: 'First Post', badge: 'Storyteller', desc: 'Shared your first post with the community', color: '#7bd0ff', show: userPosts.length >= 1 },
+                    { title: 'First Post', badge: 'Storyteller', desc: 'Shared your first post', color: '#7bd0ff', show: userPosts.length >= 1 },
                     { title: 'Active Contributor', badge: '5+ Posts', desc: 'Awarded for sharing 5+ posts', color: '#cabeff', show: userPosts.length >= 5 },
                     { title: 'Loved by Community', badge: '10+ Likes', desc: 'Your posts received 10+ total likes', color: '#f472b6', show: totalLikes >= 10 },
                   ].filter(b => b.show).map((b, i) => (
